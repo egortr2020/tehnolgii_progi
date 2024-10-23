@@ -27,3 +27,29 @@ group_columns = {
     "кнт-9": [3, 35, 36]
 }
 
+day_input = input("Введите день недели (понедельник-суббота): ").lower()
+group_input = input("Введите группу (кнт-1 - кнт-9): ").lower()
+
+if day_input in day_ranges and group_input in group_columns:
+    start_row, end_row = day_ranges[day_input]
+    selected_columns = group_columns[group_input]
+
+    gg = ""
+    for row_num in range(start_row, end_row + 1):
+        empty_row = False
+        for col_num in selected_columns: 
+            cell = sheet.cell(row=row_num, column=col_num)
+            if cell.value is None:
+                empty_row = True
+                break
+
+        if not empty_row:
+            for col_num in selected_columns:
+                cell = sheet.cell(row=row_num, column=col_num)
+                gg += str(cell.value) + " "
+            gg += "\n"
+
+    print(gg)
+
+else:
+    print("Неверный день недели или группа.")
