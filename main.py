@@ -1,3 +1,14 @@
+import telebot
+from telebot import types
+import openpyxl
+import re
+import time
+from dates import *
+bot = telebot.TeleBot('7706917053:AAH3A9HM3Do7ul0SPnmiQKCEYOvgNy3ia3U')
+
+workbook = openpyxl.load_workbook("24-knt.xlsx")
+sheet = workbook.active
+
 day_ranges = {
     "понедельник": (12, 19),
     "вторник": (23, 30),
