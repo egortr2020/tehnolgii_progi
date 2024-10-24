@@ -48,6 +48,16 @@ def save_users():
         pickle.dump(users, f)
 
 
+def subscribe_user(user_id, group_name):
+    """Подписывает пользователя на уведомления о группе."""
+    global users
+    if group_name not in users:
+        users[group_name] = []
+    if user_id not in users[group_name]:
+        users[group_name].append(user_id)
+        save_users()
+
+
 @bot.message_handler(commands=['start'])
 def main(message):
     markup = types.InlineKeyboardMarkup()
