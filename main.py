@@ -1,7 +1,7 @@
 import telebot
 from telebot import types
 import openpyxl
-bot = telebot.TeleBot('7706917053:AAH3A9HM3Do7ul0SPnmiQKCEYOvgNy3ia3U')
+bot = telebot.TeleBot('7655400381:AAFIYnMA_7HKJJoi7ight0gwsthjVlj630s')
 
 workbook = openpyxl.load_workbook("24-knt.xlsx")
 sheet = workbook.active
@@ -30,7 +30,7 @@ group_columns = {
 day_input = input("Введите день недели (понедельник-суббота): ").lower()
 group_input = input("Введите группу (кнт-1 - кнт-9): ").lower()
 
-if day_input in day_ranges and group_input in group_columns:
+"""if day_input in day_ranges and group_input in group_columns:
     start_row, end_row = day_ranges[day_input]
     selected_columns = group_columns[group_input]
 
@@ -52,4 +52,20 @@ if day_input in day_ranges and group_input in group_columns:
     print(gg)
 
 else:
-    print("Неверный день недели или группа.")
+    print("Неверный день недели или группа.")"""
+@bot.message_handler(commands=['start'])
+def main(message):
+    markup = types.InlineKeyboardMarkup()
+    markup.add(types.InlineKeyboardButton('24-кнт', callback_data='24-кнт'))
+    bot.reply_to(message, 'Привет, Выбери свой поток!', reply_markup=markup)
+@bot.callback_query_handler(func=lambda callback: True)
+def handle_callback(callback):
+    global selected_group
+    if callback.data == '24-кнт':
+        markup = types.InlineKeyboardMarkup()
+        for group_name in group_columns:
+            markup.add(types.InlineKeyboardButton(group_name.upper(), callback_data=group_name))
+        bot.send_message(callback.message.chat.id, 'Выбери группу:', reply_markup=markup)
+    
+    
+    
