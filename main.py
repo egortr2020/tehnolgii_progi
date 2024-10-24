@@ -61,7 +61,30 @@ def subscribe_user(user_id, group_name):
         users[group_name].append(user_id)
         save_users()
 
+def download_file(url, filename):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        with open(filename, 'wb') as f:
+            f.write(response.content)
+        print(f"Файл {filename} успешно скачан.")
+    except Exception as e:
+        print(f"Ошибка при скачивании файла: {e}")
 
+
+def find_changed_cell(old_sheet, new_sheet):
+    for row_num in range(1, old_sheet.max_row + 1):
+        for col_num in range(1, old_sheet.max_column + 1):
+            old_cell = old_sheet.cell(row=row_num, column=col_num)
+            new_cell = new_sheet.cell(row=row_num, column=col_num)
+            if old_cell.value != new_cell.value:
+                for day_name, (start_row, end_row) in day_ranges.items():
+                    if start_row <= row_num <= end_row:
+                        for group_name, columns in group_columns.items():
+                            if col_num in columns:
+                                return f"Изменение в расписании для группы {group_name.upper()} на {day_name.capitalize()}, ячейка: {old_cell.coordinate}"
+                return f"Изменение найдено в ячейке: {old_cell.coordinate}, но не удалось определить день недели и группу."
+    return "Изменений не обнаружено."
 
 @bot.message_handler(commands=['start'])
 def main(message):
