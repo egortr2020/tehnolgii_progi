@@ -1,10 +1,17 @@
 import telebot
 from telebot import types
 import openpyxl
-bot = telebot.TeleBot('7655400381:AAFIYnMA_7HKJJoi7ight0gwsthjVlj630s')
 
+import pickle
+
+bot = telebot.TeleBot('7655400381:AAFIYnMA_7HKJJoi7ight0gwsthjVlj630s')
+users = {}
 workbook = openpyxl.load_workbook("24-knt.xlsx")
 sheet = workbook.active
+YANDEX_DISK_URL = "https://disk.yandex.ru/i/yB5rVDGydfOy6A"
+LOCAL_FILE_NAME = "24-knt.xlsx"
+NEW_FILE_NAME = "24-knt_obnova.xlsx"
+
 
 day_ranges = {
     "понедельник": (12, 19),
@@ -27,37 +34,45 @@ group_columns = {
     "кнт-9": [3, 35, 36]
 }
 
-day_input = input("Введите день недели (понедельник-суббота): ").lower()
-group_input = input("Введите группу (кнт-1 - кнт-9): ").lower()
 
-"""if day_input in day_ranges and group_input in group_columns:
-    start_row, end_row = day_ranges[day_input]
-    selected_columns = group_columns[group_input]
 
-    gg = ""
-    for row_num in range(start_row, end_row + 1):
-        empty_row = False
-        for col_num in selected_columns: 
-            cell = sheet.cell(row=row_num, column=col_num)
-            if cell.value is None:
-                empty_row = True
-                break
+selected_group = None
+def load_users():
+    global users
+    try:
+        with open('users.pkl', 'rb') as f:
+            users = pickle.load(f)
+    except FileNotFoundError:
+        users = {}
 
-        if not empty_row:
-            for col_num in selected_columns:
-                cell = sheet.cell(row=row_num, column=col_num)
-                gg += str(cell.value) + " "
-            gg += "\n"
 
-    print(gg)
+def save_users():
+    global users
+    with open('users.pkl', 'wb') as f:
+        pickle.dump(users, f)
 
-else:
-    print("Неверный день недели или группа.")"""
+
+def subscribe_user(user_id, group_name):
+    """Подписывает пользователя на уведомления о группе."""
+    global users
+    if group_name not in users:
+        users[group_name] = []
+    if user_id not in users[group_name]:
+        users[group_name].append(user_id)
+        save_users()
+
+
+
 @bot.message_handler(commands=['start'])
 def main(message):
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton('24-кнт', callback_data='24-кнт'))
     bot.reply_to(message, 'Привет, Выбери свой поток!', reply_markup=markup)
+
+
+
+
+
 @bot.callback_query_handler(func=lambda callback: True)
 def handle_callback(callback):
     global selected_group
@@ -66,6 +81,35 @@ def handle_callback(callback):
         for group_name in group_columns:
             markup.add(types.InlineKeyboardButton(group_name.upper(), callback_data=group_name))
         bot.send_message(callback.message.chat.id, 'Выбери группу:', reply_markup=markup)
-    
-    
-    
+
+    elif callback.data in group_columns:
+        selected_group = callback.data
+        markup = types.InlineKeyboardMarkup()
+        for day_name in day_ranges:
+            markup.add(types.InlineKeyboardButton(day_name.capitalize(), callback_data=day_name))
+        bot.send_message(callback.message.chat.id, 'Выбери день недели:', reply_markup=markup)
+
+    elif callback.data in day_ranges and selected_group is not None:
+        start_row, end_row = day_ranges[callback.data]
+        selected_columns = group_columns[selected_group]
+
+        gg = ""
+        for row_num in range(start_row, end_row + 1):
+            empty_row = False
+            for col_num in selected_columns:
+                cell = sheet.cell(row=row_num, column=col_num)
+                if cell.value is None:
+                    empty_row = True
+                    break
+
+            if not empty_row:
+                for col_num in selected_columns:
+                    cell = sheet.cell(row=row_num, column=col_num)
+                    gg += str(cell.value) + " "
+                gg += "\n"
+
+        bot.send_message(callback.message.chat.id, gg)
+
+
+bot.polling(non_stop=True)
+
