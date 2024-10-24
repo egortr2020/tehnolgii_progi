@@ -27,32 +27,7 @@ group_columns = {
     "кнт-9": [3, 35, 36]
 }
 
-day_input = input("Введите день недели (понедельник-суббота): ").lower()
-group_input = input("Введите группу (кнт-1 - кнт-9): ").lower()
-
-"""if day_input in day_ranges and group_input in group_columns:
-    start_row, end_row = day_ranges[day_input]
-    selected_columns = group_columns[group_input]
-
-    gg = ""
-    for row_num in range(start_row, end_row + 1):
-        empty_row = False
-        for col_num in selected_columns: 
-            cell = sheet.cell(row=row_num, column=col_num)
-            if cell.value is None:
-                empty_row = True
-                break
-
-        if not empty_row:
-            for col_num in selected_columns:
-                cell = sheet.cell(row=row_num, column=col_num)
-                gg += str(cell.value) + " "
-            gg += "\n"
-
-    print(gg)
-
-else:
-    print("Неверный день недели или группа.")"""
+selected_group = None
 @bot.message_handler(commands=['start'])
 def main(message):
     markup = types.InlineKeyboardMarkup()
@@ -66,6 +41,35 @@ def handle_callback(callback):
         for group_name in group_columns:
             markup.add(types.InlineKeyboardButton(group_name.upper(), callback_data=group_name))
         bot.send_message(callback.message.chat.id, 'Выбери группу:', reply_markup=markup)
+    elif callback.data in group_columns:
+        selected_group = callback.data
+        markup = types.InlineKeyboardMarkup()
+        for day_name in day_ranges:
+            markup.add(types.InlineKeyboardButton(day_name.capitalize(), callback_data=day_name))
+        bot.send_message(callback.message.chat.id, 'Выбери день недели:', reply_markup=markup)
+
+    elif callback.data in day_ranges and selected_group is not None:
+        start_row, end_row = day_ranges[callback.data]
+        selected_columns = group_columns[selected_group]
+
+        gg = ""
+        for row_num in range(start_row, end_row + 1):
+            empty_row = False
+            for col_num in selected_columns:
+                cell = sheet.cell(row=row_num, column=col_num)
+                if cell.value is None:
+                    empty_row = True
+                    break
+
+            if not empty_row:
+                for col_num in selected_columns:
+                    cell = sheet.cell(row=row_num, column=col_num)
+                    gg += str(cell.value) + " "
+                gg += "\n"
+
+        bot.send_message(callback.message.chat.id, gg)
+
+bot.polling(non_stop=True)
     
     
     
