@@ -1,8 +1,12 @@
 import telebot
 from telebot import types
 import openpyxl
-
+import requests
+from time import sleep
+from os import remove, rename
+import filecmp
 import pickle
+
 
 bot = telebot.TeleBot('7655400381:AAFIYnMA_7HKJJoi7ight0gwsthjVlj630s')
 users = {}
@@ -60,6 +64,21 @@ def subscribe_user(user_id, group_name):
     if user_id not in users[group_name]:
         users[group_name].append(user_id)
         save_users()
+def unsubscribe_user(user_id):
+    """Отписывает пользователя от всех групп."""
+    global users
+    for group_name in users:
+        if user_id in users[group_name]:
+            users[group_name].remove(user_id)
+    save_users()
+
+def notify_users(group_name, message):
+    """Отправляет уведомление пользователям, подписанным на группу."""
+    global users
+    for user_id in users.get(group_name, []):
+        bot.send_message(user_id, message)
+
+
 
 def download_file(url, filename):
     try:
@@ -71,13 +90,7 @@ def download_file(url, filename):
     except Exception as e:
         print(f"Ошибка при скачивании файла: {e}")
 
-def unsubscribe_user(user_id):
-    """Отписывает пользователя от всех групп."""
-    global users
-    for group_name in users:
-        if user_id in users[group_name]:
-            users[group_name].remove(user_id)
-    save_users()
+
 
 
 
@@ -94,6 +107,44 @@ def find_changed_cell(old_sheet, new_sheet):
                                 return f"Изменение в расписании для группы {group_name.upper()} на {day_name.capitalize()}, ячейка: {old_cell.coordinate}"
                 return f"Изменение найдено в ячейке: {old_cell.coordinate}, но не удалось определить день недели и группу."
     return "Изменений не обнаружено."
+
+
+
+
+def update_schedule():
+    """Скачивает, сравнивает, обновляет файл и уведомляет пользователей."""
+    try:
+        download_file(YANDEX_DISK_URL, NEW_FILE_NAME)
+
+        if filecmp.cmp(LOCAL_FILE_NAME, NEW_FILE_NAME):
+            print("Файлы идентичны. Удаляем новый файл.")
+            remove(NEW_FILE_NAME)
+            return "Изменений не обнаружено."
+        else:
+            print("Файлы отличаются. Анализируем изменения...")
+            old_wb = openpyxl.load_workbook(LOCAL_FILE_NAME)
+            new_wb = openpyxl.load_workbook(NEW_FILE_NAME)
+            old_sheet = old_wb.active
+            new_sheet = new_wb.active
+
+            change_message = find_changed_cell(old_sheet, new_sheet)
+            if "Изменений не обнаружено" not in change_message:
+                group_name = change_message.split(" для группы ")[1].split(" на ")[0].lower()
+                notify_users(group_name, change_message)
+
+            remove(LOCAL_FILE_NAME)
+            rename(NEW_FILE_NAME, LOCAL_FILE_NAME)
+            print("Файл расписания обновлен.")
+            return change_message
+
+    except FileNotFoundError:
+        print(f"Файл {LOCAL_FILE_NAME} не найден. Переименовываем новый файл.")
+        rename(NEW_FILE_NAME, LOCAL_FILE_NAME)
+        return "Файл расписания обновлен изначально."
+    except Exception as e:
+        print(f"Ошибка при обновлении расписания: {e}")
+        return f"Ошибка при обновлении расписания: {e}"
+
 
 @bot.message_handler(commands=['start'])
 def main(message):
@@ -144,4 +195,3 @@ def handle_callback(callback):
 
 
 bot.polling(non_stop=True)
-
