@@ -62,6 +62,15 @@ def subscribe_user(user_id, group_name):
         save_users()
 
 
+def unsubscribe_user(user_id):
+    """Отписывает пользователя от всех групп."""
+    global users
+    for group_name in users:
+        if user_id in users[group_name]:
+            users[group_name].remove(user_id)
+    save_users()
+
+
 
 @bot.message_handler(commands=['start'])
 def main(message):
