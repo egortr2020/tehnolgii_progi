@@ -114,5 +114,5 @@ def handle_callback(callback):
             bot.delete_message(chat_id, selected_group_message_id)
             selected_group_message_id = None    
 
-bot.polling(non_stop=True)
+bot.polling(non_stop=True )
 
