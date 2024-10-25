@@ -73,12 +73,4 @@ def handle_callback(callback):
 
         bot.send_message(callback.message.chat.id, gg)
 
-
-if name == "main":
-    load_users()
-    bot.polling(non_stop=True)
-    while True:
-        update_result = update_schedule()
-        print(update_result)
-        sleep(3600)
-        
+bot.polling(non_stop=True)
