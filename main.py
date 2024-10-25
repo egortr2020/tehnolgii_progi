@@ -1,21 +1,11 @@
 import telebot
 from telebot import types
 import openpyxl
-import requests
-from time import sleep
-from os import remove, rename
-import filecmp
-import pickle
-
 
 bot = telebot.TeleBot('7655400381:AAFIYnMA_7HKJJoi7ight0gwsthjVlj630s')
-users = {}
+
 workbook = openpyxl.load_workbook("24-knt.xlsx")
 sheet = workbook.active
-YANDEX_DISK_URL = "https://disk.yandex.ru/i/yB5rVDGydfOy6A"
-LOCAL_FILE_NAME = "24-knt.xlsx"
-NEW_FILE_NAME = "24-knt_obnova.xlsx"
-
 
 day_ranges = {
     "понедельник": (12, 19),
@@ -37,114 +27,21 @@ group_columns = {
     "кнт-8": [3, 32, 33],
     "кнт-9": [3, 35, 36]
 }
+def get_schedule_date(selected_day):
+    """Возвращает дату для выбранного дня недели."""
+    today = datetime.today()
+    selected_day_num = list(day_ranges.keys()).index(selected_day) 
+    days_difference = (selected_day_num - today.weekday()) % 7 
+    
+    if days_difference == 0: 
+        return today.strftime("%d.%m.%Y")
+    elif days_difference < 0: 
+        days_difference += 7
+    
+    schedule_date = today + timedelta(days=days_difference)
+    return schedule_date.strftime("%d.%m.%Y")
 
-
-
-selected_group = None
-def load_users():
-    global users
-    try:
-        with open('users.pkl', 'rb') as f:
-            users = pickle.load(f)
-    except FileNotFoundError:
-        users = {}
-
-
-def save_users():
-    global users
-    with open('users.pkl', 'wb') as f:
-        pickle.dump(users, f)
-
-
-def subscribe_user(user_id, group_name):
-    """Подписывает пользователя на уведомления о группе."""
-    global users
-    if group_name not in users:
-        users[group_name] = []
-    if user_id not in users[group_name]:
-        users[group_name].append(user_id)
-        save_users()
-def unsubscribe_user(user_id):
-    """Отписывает пользователя от всех групп."""
-    global users
-    for group_name in users:
-        if user_id in users[group_name]:
-            users[group_name].remove(user_id)
-    save_users()
-
-def notify_users(group_name, message):
-    """Отправляет уведомление пользователям, подписанным на группу."""
-    global users
-    for user_id in users.get(group_name, []):
-        bot.send_message(user_id, message)
-
-
-
-def download_file(url, filename):
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        with open(filename, 'wb') as f:
-            f.write(response.content)
-        print(f"Файл {filename} успешно скачан.")
-    except Exception as e:
-        print(f"Ошибка при скачивании файла: {e}")
-
-
-
-
-
-def find_changed_cell(old_sheet, new_sheet):
-    for row_num in range(1, old_sheet.max_row + 1):
-        for col_num in range(1, old_sheet.max_column + 1):
-            old_cell = old_sheet.cell(row=row_num, column=col_num)
-            new_cell = new_sheet.cell(row=row_num, column=col_num)
-            if old_cell.value != new_cell.value:
-                for day_name, (start_row, end_row) in day_ranges.items():
-                    if start_row <= row_num <= end_row:
-                        for group_name, columns in group_columns.items():
-                            if col_num in columns:
-                                return f"Изменение в расписании для группы {group_name.upper()} на {day_name.capitalize()}, ячейка: {old_cell.coordinate}"
-                return f"Изменение найдено в ячейке: {old_cell.coordinate}, но не удалось определить день недели и группу."
-    return "Изменений не обнаружено."
-
-
-
-
-def update_schedule():
-    """Скачивает, сравнивает, обновляет файл и уведомляет пользователей."""
-    try:
-        download_file(YANDEX_DISK_URL, NEW_FILE_NAME)
-
-        if filecmp.cmp(LOCAL_FILE_NAME, NEW_FILE_NAME):
-            print("Файлы идентичны. Удаляем новый файл.")
-            remove(NEW_FILE_NAME)
-            return "Изменений не обнаружено."
-        else:
-            print("Файлы отличаются. Анализируем изменения...")
-            old_wb = openpyxl.load_workbook(LOCAL_FILE_NAME)
-            new_wb = openpyxl.load_workbook(NEW_FILE_NAME)
-            old_sheet = old_wb.active
-            new_sheet = new_wb.active
-
-            change_message = find_changed_cell(old_sheet, new_sheet)
-            if "Изменений не обнаружено" not in change_message:
-                group_name = change_message.split(" для группы ")[1].split(" на ")[0].lower()
-                notify_users(group_name, change_message)
-
-            remove(LOCAL_FILE_NAME)
-            rename(NEW_FILE_NAME, LOCAL_FILE_NAME)
-            print("Файл расписания обновлен.")
-            return change_message
-
-    except FileNotFoundError:
-        print(f"Файл {LOCAL_FILE_NAME} не найден. Переименовываем новый файл.")
-        rename(NEW_FILE_NAME, LOCAL_FILE_NAME)
-        return "Файл расписания обновлен изначально."
-    except Exception as e:
-        print(f"Ошибка при обновлении расписания: {e}")
-        return f"Ошибка при обновлении расписания: {e}"
-
+selected_group = None 
 
 @bot.message_handler(commands=['start'])
 def main(message):
@@ -152,26 +49,22 @@ def main(message):
     markup.add(types.InlineKeyboardButton('24-кнт', callback_data='24-кнт'))
     bot.reply_to(message, 'Привет, Выбери свой поток!', reply_markup=markup)
 
-
-
-
-
 @bot.callback_query_handler(func=lambda callback: True)
 def handle_callback(callback):
     global selected_group
+    markup = types.InlineKeyboardMarkup()
+
     if callback.data == '24-кнт':
-        markup = types.InlineKeyboardMarkup()
         for group_name in group_columns:
             markup.add(types.InlineKeyboardButton(group_name.upper(), callback_data=group_name))
         bot.send_message(callback.message.chat.id, 'Выбери группу:', reply_markup=markup)
 
     elif callback.data in group_columns:
         selected_group = callback.data
-        markup = types.InlineKeyboardMarkup()
         for day_name in day_ranges:
             markup.add(types.InlineKeyboardButton(day_name.capitalize(), callback_data=day_name))
         bot.send_message(callback.message.chat.id, 'Выбери день недели:', reply_markup=markup)
-
+    
     elif callback.data in day_ranges and selected_group is not None:
         start_row, end_row = day_ranges[callback.data]
         selected_columns = group_columns[selected_group]
@@ -193,12 +86,4 @@ def handle_callback(callback):
 
         bot.send_message(callback.message.chat.id, gg)
 
-
-if name == "main":
-    load_users()
-    bot.polling(non_stop=True)
-    while True:
-        update_result = update_schedule()
-        print(update_result)
-        sleep(3600)
-        
+bot.polling(non_stop=True)
