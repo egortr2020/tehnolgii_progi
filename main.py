@@ -1,7 +1,8 @@
 import telebot
 from telebot import types
 import openpyxl
-
+import time
+from dates import *
 bot = telebot.TeleBot('7655400381:AAFIYnMA_7HKJJoi7ight0gwsthjVlj630s')
 
 workbook = openpyxl.load_workbook("24-knt.xlsx")
@@ -42,6 +43,7 @@ def get_schedule_date(selected_day):
     return schedule_date.strftime("%d.%m.%Y")
 
 selected_group = None 
+selected_group = None 
 
 @bot.message_handler(commands=['start'])
 def main(message):
@@ -54,6 +56,8 @@ def handle_callback(callback):
     global selected_group
     markup = types.InlineKeyboardMarkup()
 
+    markup = types.InlineKeyboardMarkup()
+
     if callback.data == '24-кнт':
         for group_name in group_columns:
             markup.add(types.InlineKeyboardButton(group_name.upper(), callback_data=group_name))
@@ -64,6 +68,7 @@ def handle_callback(callback):
         for day_name in day_ranges:
             markup.add(types.InlineKeyboardButton(day_name.capitalize(), callback_data=day_name))
         bot.send_message(callback.message.chat.id, 'Выбери день недели:', reply_markup=markup)
+    
     
     elif callback.data in day_ranges and selected_group is not None:
         start_row, end_row = day_ranges[callback.data]
