@@ -101,7 +101,7 @@ def handle_callback(callback):
                     cell = sheet.cell(row=row_num, column=col_num)
                     cell_value = cell.value
                     vrem += str(cell_value) + " " 
-                print("vrem before check:", vrem)
+                
             if not re.findall(r"\d{2}\.\d{2}", vrem) and not re.search(r"\d{1,2}:\d{2} - \d{1,2}:\d{2}\s*с\s*(\d{2}\.\d{2})", vrem):
                 rezult += vrem + "\n\n"
             else:
