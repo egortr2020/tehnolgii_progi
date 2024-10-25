@@ -27,6 +27,19 @@ group_columns = {
     "кнт-8": [3, 32, 33],
     "кнт-9": [3, 35, 36]
 }
+def get_schedule_date(selected_day):
+    """Возвращает дату для выбранного дня недели."""
+    today = datetime.today()
+    selected_day_num = list(day_ranges.keys()).index(selected_day) 
+    days_difference = (selected_day_num - today.weekday()) % 7 
+    
+    if days_difference == 0: 
+        return today.strftime("%d.%m.%Y")
+    elif days_difference < 0: 
+        days_difference += 7
+    
+    schedule_date = today + timedelta(days=days_difference)
+    return schedule_date.strftime("%d.%m.%Y")
 
 selected_group = None 
 
