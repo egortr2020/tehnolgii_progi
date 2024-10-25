@@ -1,6 +1,9 @@
 import telebot
 from telebot import types
 import openpyxl
+import re
+import time
+from dates import *
 
 bot = telebot.TeleBot('7655400381:AAFIYnMA_7HKJJoi7ight0gwsthjVlj630s')
 
@@ -69,7 +72,7 @@ def handle_callback(callback):
         start_row, end_row = day_ranges[callback.data]
         selected_columns = group_columns[selected_group]
     
-    rezult = ""
+        rezult = ""
         for row_num in range(start_row, end_row + 1):
             vrem = ''
             empty_row = False
@@ -87,6 +90,29 @@ def handle_callback(callback):
                 print("vrem before check:", vrem)
             if not re.findall(r"\d{2}\.\d{2}", vrem) and not re.search(r"\d{1,2}:\d{2} - \d{1,2}:\d{2}\s*с\s*(\d{2}\.\d{2})", vrem):
                 rezult += vrem + "\n\n"
+            else:
+                # Если даты есть, обрабатываем как и раньше:
+                if re.search(r"\d{1,2}:\d{2} - \d{1,2}:\d{2}\s*с\s*(\d{2}\.\d{2})", vrem):
+                    match = re.search(r"\d{1,2}:\d{2} - \d{1,2}:\d{2}\s*с\s*(\d{2}\.\d{2})", vrem)
+                    date_str = match.group(1)
+                    if is_date_past(date_str):  
+                        rezult += vrem + "\n\n"
+                elif re.findall(r"\d{2}\.\d{2}", vrem):
+                    dates_in_row = re.findall(r"\d{2}\.\d{2}", vrem)
+                    if dates_in_row and is_date_in_current_week(",".join(dates_in_row)):
+                        rezult += vrem + "\n\n" 
+        rezult = re.sub(r'\n{2,}', '\n\n', rezult)    
+        day_markup = types.InlineKeyboardMarkup(row_width=2)        
+        day_markup.add(*[types.InlineKeyboardButton(day_name.capitalize(), callback_data=day_name) for day_name in day_ranges])
+        schedule_date_str = get_schedule_date(callback.data)
+        if rezult.strip():
+            bot.send_message(chat_id, f"📅 Дата: {schedule_date_str}\n{rezult}", reply_markup=day_markup)       
+        else:
+            bot.send_message(chat_id, f"📅 Дата: {schedule_date_str}\n\nНет данных для отображения", reply_markup=day_markup)
+        bot.delete_message(chat_id, message_id)   
+        if selected_group_message_id is not None:
+            bot.delete_message(chat_id, selected_group_message_id)
+            selected_group_message_id = None    
 
 bot.polling(non_stop=True)
 
