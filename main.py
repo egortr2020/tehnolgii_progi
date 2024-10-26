@@ -55,6 +55,16 @@ def main(message):
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton('24-кнт', callback_data='24-кнт'))
     sent_message = bot.reply_to(message, 'Привет, Выбери свой поток!', reply_markup=markup)
+    try:
+        for message_id_to_delete in range(current_message_id - 1, message.message_id - 50, -1):
+            try:
+                bot.delete_message(chat_id=message.chat.id, message_id=message_id_to_delete)
+            except Exception as e:
+                
+                time.sleep(0.01) 
+                break
+    except:
+        pass
 
 @bot.callback_query_handler(func=lambda callback: True)
 def handle_callback(callback):
